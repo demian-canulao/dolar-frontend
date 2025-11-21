@@ -1,0 +1,19 @@
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* Evitar que Vite meta estilos innecesarios */
+body {
+  font-family: Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f5f5f5; /* Puedes quitarlo si usas theme oscuro */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Quitar estilos blue feos por defecto en los <a> */
+a {
+  text-decoration: none;
+  color: inherit;
+}
