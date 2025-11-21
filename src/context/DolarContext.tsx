@@ -1,7 +1,36 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-function fmtDate(input) {
+
+// ---- Tipos ----
+export interface DolarRow {
+  date: string;
+  value: number;
+}
+
+export interface DolarContextType {
+  data: DolarRow[];
+  loading: boolean;
+  error: string | null;
+  startDate: Date;
+  endDate: Date;
+  setRange: (from: Date | string, to: Date | string) => void;
+  resetLast30Days: () => void;
+  updateValue: (date: string, newValue: number | string) => void;
+  deleteValue: (date: string) => void;
+}
+
+// ---- Contexto tipado ----
+const DolarContext = createContext<DolarContextType | undefined>(undefined);
+
+export const useDolar = () => {
+  const ctx = useContext(DolarContext);
+  if (!ctx) throw new Error("useDolar must be used inside DolarProvider");
+  return ctx;
+};
+
+// ---- Helpers ----
+function fmtDate(input: any): string | null {
   if (!input) return null;
   const d = new Date(input);
   if (isNaN(d.getTime())) return null;
@@ -9,119 +38,113 @@ function fmtDate(input) {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
+
   return `${yyyy}-${mm}-${dd}`;
 }
 
-const DolarContext = createContext();
+// ---- Provider ----
+export const DolarProvider = ({ children }: { children: ReactNode }) => {
+  const [data, setData] = useState<DolarRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export const useDolar = () => useContext(DolarContext);
+  const today = new Date();
+  const startDefault = new Date();
+  startDefault.setDate(today.getDate() - 30);
 
-export const DolarProvider = ({ children }) => {
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+  const [startDate, setStartDate] = useState<Date>(startDefault);
+  const [endDate, setEndDate] = useState<Date>(today);
 
-    const today = new Date();
-    const startDefault = new Date();
-    startDefault.setDate(today.getDate() - 30);
+  const fetchDolar = async (fromDate: Date, toDate: Date) => {
+    const from = fmtDate(fromDate);
+    const to = fmtDate(toDate);
 
-    const [startDate, setStartDate] = useState(startDefault);
-    const [endDate, setEndDate] = useState(today);
+    if (!from || !to) {
+      setData([]);
+      return;
+    }
 
-    const fetchDolar = async (fromDate, toDate) => {
-        const from = fmtDate(fromDate);
-        const to = fmtDate(toDate);
+    if (fromDate > toDate) {
+      setError("Rango invalido");
+      setData([]);
+      return;
+    }
 
-        if (!from || !to) {
-        setData([]);
-        return;
-        }
+    try {
+      setLoading(true);
+      setError(null);
 
-        if (fromDate > toDate) {
-        setError("Rango invalido");
-        setData([]);
-        return;
-        }
+      const url = `${API_URL}/dollar?from=${from}&to=${to}`;
 
-        try {
-        setLoading(true);
-        setError(null);
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
 
-        const url = `${API_URL}/dollar?from=${from}&to=${to}`;
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message || `HTTP ${res.status}`);
+      }
 
-        const res = await fetch(url, {
-            headers: {
-            Accept: "application/json",
-            },
-        });
+      const json = await res.json();
 
-        if (!res.ok) {
-            const body = await res.json().catch(() => null);
-            throw new Error(body?.message || `HTTP ${res.status}`);
-        }
+      const normalized: DolarRow[] = Array.isArray(json)
+        ? json.map((r: any) => ({
+            date: fmtDate(r.date)!,
+            value: Number(r.value),
+          }))
+        : [];
 
-        const json = await res.json();
+      setData(normalized);
+    } catch (err: any) {
+      setError(err.message || "Error al obtener datos");
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const normalized = Array.isArray(json)
-            ? json.map((r) => ({
-                date: fmtDate(r.date),
-                value: Number(r.value),
-            }))
-            : [];
+  useEffect(() => {
+    fetchDolar(startDate, endDate);
+  }, [startDate, endDate]);
 
-        setData(normalized);
-        } catch (err) {
-        setError(err.message || "Error al obtener datos");
-        setData([]);
-        } finally {
-        setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchDolar(startDate, endDate);
-    }, [startDate, endDate]);
-
-    const updateValue = (date, newValue) => {
-        setData((prev) =>
-        prev.map((item) =>
-            item.date === date ? { ...item, value: Number(newValue) } : item
-        )
-        );
-    };
-
-    const deleteValue = (date) => {
-        setData((prev) => prev.filter((item) => item.date !== date));
-    };
-
-    const setRange = (from, to) => {
-        setStartDate(typeof from === "string" ? new Date(from) : from);
-        setEndDate(typeof to === "string" ? new Date(to) : to);
-    };
-
-    const resetLast30Days = () => {
-        const now = new Date();
-        const s = new Date();
-        s.setDate(now.getDate() - 30);
-        setStartDate(s);
-        setEndDate(now);
-    };
-
-    return (
-        <DolarContext.Provider
-        value={{
-            data,
-            loading,
-            error,
-            startDate,
-            endDate,
-            setRange,
-            resetLast30Days,
-            updateValue,
-            deleteValue,
-        }}
-        >
-        {children}
-        </DolarContext.Provider>
+  const updateValue = (date: string, newValue: number | string) => {
+    setData((prev) =>
+      prev.map((item) =>
+        item.date === date ? { ...item, value: Number(newValue) } : item
+      )
     );
+  };
+
+  const deleteValue = (date: string) => {
+    setData((prev) => prev.filter((item) => item.date !== date));
+  };
+
+  const setRange = (from: string | Date, to: string | Date) => {
+    setStartDate(typeof from === "string" ? new Date(from) : from);
+    setEndDate(typeof to === "string" ? new Date(to) : to);
+  };
+
+  const resetLast30Days = () => {
+    const now = new Date();
+    const s = new Date();
+    s.setDate(now.getDate() - 30);
+    setStartDate(s);
+    setEndDate(now);
+  };
+
+  return (
+    <DolarContext.Provider
+      value={{
+        data,
+        loading,
+        error,
+        startDate,
+        endDate,
+        setRange,
+        resetLast30Days,
+        updateValue,
+        deleteValue,
+      }}
+    >
+      {children}
+    </DolarContext.Provider>
+  );
 };
