@@ -3,7 +3,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
-import { useDolar } from "../context/DolarContext";
+import { useDolar } from "../context/DolarContext.tsx";
 
 export default function DolarDateFilter() {
   const { startDate, endDate, setRange, resetLast30Days } = useDolar();

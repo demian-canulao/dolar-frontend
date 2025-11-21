@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useDolar } from "../context/DolarContext";
+import { useDolar } from "../context/DolarContext.tsx";
 
 export default function DolarChart() {
   const { data, loading, error } = useDolar();

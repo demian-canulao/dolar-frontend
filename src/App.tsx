@@ -1,5 +1,5 @@
 import { ThemeProvider, CssBaseline, Container, Box } from "@mui/material";
-import { DolarProvider } from "./context/DolarContext";
+import { DolarProvider } from "./context/DolarContext.tsx";
 import DolarChart from "./components/DolarChart";
 import DolarTable from "./components/DolarTable";
 import DolarDateFilter from "./components/DolarDateFilter"

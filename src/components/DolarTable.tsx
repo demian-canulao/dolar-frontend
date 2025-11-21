@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDolar } from "../context/DolarContext";
+import { useDolar } from "../context/DolarContext.tsx";
 
 import {
     Table,
