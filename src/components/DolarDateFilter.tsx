@@ -2,8 +2,8 @@ import { Box, Button } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import dayjs from "dayjs";
-import { useDolar } from "../context/DolarContext.tsx";
+import dayjs, { Dayjs } from "dayjs";
+import { useDolar } from "../context/DolarContext";
 
 export default function DolarDateFilter() {
   const { startDate, endDate, setRange, resetLast30Days } = useDolar();
@@ -15,8 +15,8 @@ export default function DolarDateFilter() {
         <DatePicker
           format="DD/MM/YYYY"
           label="Fecha inicio"
-          value={dayjs(startDate)}
-          onChange={(value) => {
+          value={startDate ? dayjs(startDate) : null}
+          onChange={(value: Dayjs | null) => {
             if (!value) return;
             setRange(value.toDate(), endDate);
           }}
@@ -25,8 +25,8 @@ export default function DolarDateFilter() {
         <DatePicker
           format="DD/MM/YYYY"
           label="Fecha fin"
-          value={dayjs(endDate)}
-          onChange={(value) => {
+          value={endDate ? dayjs(endDate) : null}
+          onChange={(value: Dayjs | null) => {
             if (!value) return;
             setRange(startDate, value.toDate());
           }}

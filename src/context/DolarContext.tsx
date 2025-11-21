@@ -1,8 +1,11 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 function fmtDate(input) {
   if (!input) return null;
   const d = new Date(input);
+  if (isNaN(d.getTime())) return null;
+
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
@@ -14,7 +17,7 @@ const DolarContext = createContext();
 export const useDolar = () => useContext(DolarContext);
 
 export const DolarProvider = ({ children }) => {
-    const [data, setData] = useState([]); 
+    const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -22,7 +25,7 @@ export const DolarProvider = ({ children }) => {
     const startDefault = new Date();
     startDefault.setDate(today.getDate() - 30);
 
-    const [startDate, setStartDate] = useState(startDefault); 
+    const [startDate, setStartDate] = useState(startDefault);
     const [endDate, setEndDate] = useState(today);
 
     const fetchDolar = async (fromDate, toDate) => {
@@ -34,38 +37,44 @@ export const DolarProvider = ({ children }) => {
         return;
         }
 
+        if (fromDate > toDate) {
+        setError("Rango invalido");
+        setData([]);
+        return;
+        }
+
         try {
-            setLoading(true);
-            setError(null);
+        setLoading(true);
+        setError(null);
 
-            const url = `http://localhost:8000/api/dollar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+        const url = `${API_URL}/dollar?from=${from}&to=${to}`;
 
-            const res = await fetch(url, {
-                headers: {
-                "Accept": "application/json",
-                },
-            });
+        const res = await fetch(url, {
+            headers: {
+            Accept: "application/json",
+            },
+        });
 
-            if (!res.ok) {
-                let msg = `HTTP ${res.status}`;
-                try {
-                const body = await res.json();
-                msg = body.message || JSON.stringify(body);
-                } catch (_) {}
-                throw new Error(msg);
-            }
+        if (!res.ok) {
+            const body = await res.json().catch(() => null);
+            throw new Error(body?.message || `HTTP ${res.status}`);
+        }
 
-            const json = await res.json();
-            
-            const normalized = Array.isArray(json)
-                ? json.map((r) => ({ date: (r.date), value: Number(r.value) }))
-                : [];
-            setData(normalized);
+        const json = await res.json();
+
+        const normalized = Array.isArray(json)
+            ? json.map((r) => ({
+                date: fmtDate(r.date),
+                value: Number(r.value),
+            }))
+            : [];
+
+        setData(normalized);
         } catch (err) {
-            setError(err.message || "Error al obtener datos");
-            setData([]);
+        setError(err.message || "Error al obtener datos");
+        setData([]);
         } finally {
-            setLoading(false);
+        setLoading(false);
         }
     };
 
@@ -76,20 +85,18 @@ export const DolarProvider = ({ children }) => {
     const updateValue = (date, newValue) => {
         setData((prev) =>
         prev.map((item) =>
-            item.date === (date) ? { ...item, value: Number(newValue) } : item
+            item.date === date ? { ...item, value: Number(newValue) } : item
         )
         );
     };
 
     const deleteValue = (date) => {
-        setData((prev) => prev.filter((item) => item.date !== (date)));
+        setData((prev) => prev.filter((item) => item.date !== date));
     };
 
     const setRange = (from, to) => {
-        const fromDate = typeof from === "string" ? new Date(from) : from;
-        const toDate = typeof to === "string" ? new Date(to) : to;
-        setStartDate(fromDate);
-        setEndDate(toDate);
+        setStartDate(typeof from === "string" ? new Date(from) : from);
+        setEndDate(typeof to === "string" ? new Date(to) : to);
     };
 
     const resetLast30Days = () => {
