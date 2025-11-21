@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
-// ---- Tipos ----
 export interface DolarRow {
   date: string;
   value: number;
@@ -20,7 +20,6 @@ export interface DolarContextType {
   deleteValue: (date: string) => void;
 }
 
-// ---- Contexto tipado ----
 const DolarContext = createContext<DolarContextType | undefined>(undefined);
 
 export const useDolar = () => {
@@ -29,7 +28,6 @@ export const useDolar = () => {
   return ctx;
 };
 
-// ---- Helpers ----
 function fmtDate(input: any): string | null {
   if (!input) return null;
   const d = new Date(input);
@@ -42,7 +40,6 @@ function fmtDate(input: any): string | null {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-// ---- Provider ----
 export const DolarProvider = ({ children }: { children: ReactNode }) => {
   const [data, setData] = useState<DolarRow[]>([]);
   const [loading, setLoading] = useState(false);
